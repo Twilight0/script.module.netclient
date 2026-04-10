@@ -23,12 +23,19 @@ import six
 from six.moves import urllib_request, urllib_parse, urllib_error, urllib_response, http_cookiejar
 import socket
 import sys
-import xbmcvfs
+import certifi
+try:
+    import xbmcvfs
+except ImportError:
+    xbmcvfs = None
 
 # Set Global timeout - Useful for slow connections and Putlocker.
 socket.setdefaulttimeout(10)
 
-CERT_FILE = xbmcvfs.translatePath('special://xbmc/system/certs/cacert.pem')
+if xbmcvfs:
+    CERT_FILE = xbmcvfs.translatePath('special://xbmc/system/certs/cacert.pem')
+else:
+    CERT_FILE = certifi.where()
 
 
 class NoRedirection(urllib_request.HTTPRedirectHandler):
@@ -343,12 +350,11 @@ class Net:
                         opener = urllib_request.build_opener(*handlers)
                         try:
                             response = opener.open(req, timeout=timeout)
-                        except urllib_error.HTTPError:
-                            from resolveurl.resolver import ResolverError
-                            raise ResolverError('Cloudflare challenge')
-                        except urllib_error.URLError:
-                            from resolveurl.resolver import ResolverError
-                            raise ResolverError('Cloudflare challenge')
+                        except urllib_error.HTTPError as e:
+                            raise urllib_error.HTTPError('Cloudflare challenge')
+                            print(f"Failed to fetch the page: {e}")
+                        except urllib_error.URLError as e:
+                            raise urllib_error.HTTPError('Cloudflare challenge')
             else:
                 raise
 
